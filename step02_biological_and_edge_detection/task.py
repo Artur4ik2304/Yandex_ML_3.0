@@ -1,4 +1,7 @@
 import numpy as np
+from math import degrees
+cell_size = 7
+
 def compute_sobel_gradients_two_loops(image):
     # Get image dimensions
     height, width = image.shape
@@ -9,7 +12,6 @@ def compute_sobel_gradients_two_loops(image):
 
     # Pad the image with zeros to handle borders
     padded_image = np.pad(image, ((1, 1), (1, 1)), mode='constant', constant_values=0)
-# __________end of block__________
 
     # Define the Sobel kernels for X and Y gradients
     sobel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
@@ -21,8 +23,8 @@ def compute_sobel_gradients_two_loops(image):
             gradient_x[i - 1][j - 1] = np.sum(padded_image[i - 1: i + 2, j - 1: j + 2] * sobel_x)
             gradient_y[i - 1][j - 1] = np.sum(padded_image[i - 1: i + 2, j - 1: j + 2] * sobel_y)
     return gradient_x, gradient_y
-  
-  def compute_gradient_magnitude(sobel_x, sobel_y):
+
+def compute_gradient_magnitude(sobel_x, sobel_y):
     '''
     Compute the magnitude of the gradient given the x and y gradients.
 
@@ -35,7 +37,6 @@ def compute_sobel_gradients_two_loops(image):
     '''
     # YOUR CODE HERE
     return np.sqrt(sobel_x**2 + sobel_y**2)
-
 
 def compute_gradient_direction(sobel_x, sobel_y):
     '''
@@ -50,9 +51,8 @@ def compute_gradient_direction(sobel_x, sobel_y):
         gradient_direction: numpy array of the same shape as the input [0] with the direction of the gradient.
     '''
     # YOUR CODE HERE
-    return np.arctan2(sobel_y, sobel_x) * 180 / np.pi 
+    return np.degrees(np.arctan2(sobel_y, sobel_x))
 
-cell_size = 7
 def compute_hog(image, pixels_per_cell=(cell_size, cell_size), bins=9):
     # 1. Convert the image to grayscale if it's not already (assuming the image is in RGB or BGR)
     if len(image.shape) == 3:
@@ -71,17 +71,14 @@ def compute_hog(image, pixels_per_cell=(cell_size, cell_size), bins=9):
     n_cells_y = image.shape[0] // cell_height
 
     histograms = np.zeros((n_cells_y, n_cells_x, bins))
-
+    bin_edges = np.linspace(-180, 180, 10, endpoint=True)
     for i in range(n_cells_y):
         for j in range(n_cells_x):
-          norm = 0
-          for i_p in range(i * 8, min(27, 8 * (i + 1))):
-            for j_p in range(j * 8, min(27, 8 * (j + 1))):
-              if direction[i_p, j_p] == 180:
-                histograms[i, j, 8] += magnitude[i_p, j_p]
-              else:
-                histograms[i, j, int(direction[i_p, j_p] + 180) * bins // 360] += magnitude[i_p, j_p]
-              norm += magnitude[i_p, j_p]
-          if norm != 0:
-            histograms[i, j] /= norm
+          y_start, y_end = cell_height * i, cell_height * (i + 1)
+          x_start, x_end = cell_width * j, cell_width * (j + 1)
+          histograms[i, j], _ = np.histogram(direction[y_start: y_end, x_start: x_end], bins=bin_edges, 
+                                          weights=magnitude[y_start: y_end, x_start: x_end])
+          hist_sum = np.sum(histograms[i, j])
+          if hist_sum > 0:
+            histograms[i, j] = histograms[i, j] / hist_sum
     return histograms
